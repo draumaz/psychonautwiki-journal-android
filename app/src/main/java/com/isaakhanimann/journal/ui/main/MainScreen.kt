@@ -81,10 +81,12 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -114,14 +116,18 @@ fun MainScreen(
     viewModel: MainScreenViewModel = hiltViewModel()
 ) {
     if (viewModel.isAcceptedFlow.collectAsState().value) {
+        val haptic = LocalHapticFeedback.current
         val navController = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
 
         val isSearchScreenActive = currentDestination?.hasRoute(AddIngestionSearchRoute::class) == true
+        val isInAddIngestionFlow = currentDestination?.hierarchy?.any {
+            it.hasRoute(AddIngestionRoute::class)
+        } == true
 
         var isBottomBarVisibleByScroll by remember { mutableStateOf(true) }
-        val isBottomBarVisible = isBottomBarVisibleByScroll
+        val isBottomBarVisible = isBottomBarVisibleByScroll && (!isInAddIngestionFlow || isSearchScreenActive)
 
         val nestedScrollConnection = remember {
             object : NestedScrollConnection {
@@ -343,7 +349,10 @@ fun MainScreen(
                                         }
                                         if (searchText.isNotEmpty()) {
                                             IconButton(
-                                                onClick = { searchViewModel.updateSearchText("") },
+                                                onClick = {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    searchViewModel.updateSearchText("")
+                                                },
                                                 modifier = Modifier.size(24.dp)
                                             ) {
                                                 Icon(
@@ -392,6 +401,7 @@ fun MainScreen(
                                                 .clip(CircleShape)
                                                 .background(backgroundColor)
                                                 .clickable {
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                     if (selected) {
                                                         val isAlreadyOnTopOfTab = topLevelRoutes.any { it.route == currentDestination.route }
                                                         if (!isAlreadyOnTopOfTab) {
