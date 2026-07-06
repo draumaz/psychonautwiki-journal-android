@@ -3,9 +3,13 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp">
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
+    android:paddingTop="8dp"
+    android:paddingBottom="8dp">
 
     <LinearLayout
+        android:id="@+id/notification_header_row"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal">
@@ -16,8 +20,10 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:textColor="?android:attr/textColorPrimary"
-            android:textSize="18sp"
-            android:textStyle="bold" />
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:maxLines="1"
+            android:ellipsize="end" />
 
         <TextView
             android:id="@+id/notification_phase"
@@ -27,12 +33,29 @@
             android:textSize="14sp" />
     </LinearLayout>
 
+    <!-- Space between header and progress bar. Visibility toggled for expansion animation. -->
+    <LinearLayout
+        android:id="@+id/notification_spacer"
+        android:layout_width="match_parent"
+        android:layout_height="12dp"
+        android:orientation="horizontal"
+        android:visibility="gone" />
+
+    <ImageView
+        android:id="@+id/notification_progress_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="24dp"
+        android:scaleType="fitCenter"
+        android:contentDescription="Progress bar" />
+
     <ImageView
         android:id="@+id/notification_graph"
         android:layout_width="match_parent"
         android:layout_height="120dp"
         android:layout_marginTop="8dp"
         android:scaleType="fitCenter"
-        android:contentDescription="Timeline graph" />
+        android:contentDescription="Timeline graph"
+        android:visibility="gone" />
 
 </LinearLayout>

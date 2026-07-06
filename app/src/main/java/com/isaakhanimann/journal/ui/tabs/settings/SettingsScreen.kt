@@ -284,7 +284,7 @@ fun SettingsScreen(
                         confirmButton = {
                             TextButton(onClick = {
                                 isShowingExportDialog = false
-                                launcherExport.launch("Journal ${Instant.now().getStringOfPattern("dd MMM yyyy")}.json")
+                                launcherExport.launch("jrnl ${Instant.now().getStringOfPattern("dd MMM yyyy")}.json")
                             }) { Text("Export") }
                         },
                         dismissButton = {

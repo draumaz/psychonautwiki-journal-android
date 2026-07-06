@@ -1,19 +1,19 @@
 /*
  * Copyright (c) 2022-2023. Isaak Hanimann.
- * This file is part of PsychonautWiki Journal.
+ * This file is part of jrnl.
  *
- * PsychonautWiki Journal is free software: you can redistribute it and/or modify
+ * jrnl is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or (at
  * your option) any later version.
  *
- * PsychonautWiki Journal is distributed in the hope that it will be useful,
+ * jrnl is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with PsychonautWiki Journal.  If not, see https://www.gnu.org/licenses/gpl-3.0.en.html.
+ * along with jrnl.  If not, see https://www.gnu.org/licenses/gpl-3.0.en.html.
  */
 
 package com.isaakhanimann.journal.ui.tabs.journal
@@ -403,7 +403,7 @@ fun JournalScreen(
         containerColor = Color.Transparent,
         topBar = {
             TopAppBar(
-                title = { Text("Journal") },
+                title = { Text("jrnl") },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                     scrolledContainerColor = Color.Transparent

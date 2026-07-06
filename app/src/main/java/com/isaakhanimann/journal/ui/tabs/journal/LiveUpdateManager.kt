@@ -1,19 +1,19 @@
 /*
  * Copyright (c) 2022-2023. Isaak Hanimann.
- * This file is part of PsychonautWiki Journal.
+ * This file is part of jrnl.
  *
- * PsychonautWiki Journal is free software: you can redistribute it and/or modify
+ * jrnl is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or (at
  * your option) any later version.
  *
- * PsychonautWiki Journal is distributed in the hope that it will be useful,
+ * jrnl is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with PsychonautWiki Journal.  If not, see https://www.gnu.org/licenses/gpl-3.0.en.html.
+ * along with jrnl.  If not, see https://www.gnu.org/licenses/gpl-3.0.en.html.
  */
 
 package com.isaakhanimann.journal.ui.tabs.journal
@@ -28,6 +28,7 @@ import android.graphics.CornerPathEffect
 import android.graphics.DashPathEffect
 import android.graphics.Paint
 import android.graphics.Path
+import android.view.View
 import android.widget.RemoteViews
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.app.NotificationCompat
@@ -202,28 +203,135 @@ class LiveUpdateManager @Inject constructor(
 
         val substanceName = liveUpdate.ingestionWithCompanion.ingestion.substanceName
         
-        val remoteViews = RemoteViews(context.packageName, R.layout.notification_live_update)
-        remoteViews.setTextViewText(R.id.notification_title, substanceName)
-        remoteViews.setTextViewText(R.id.notification_phase, phaseName)
-        
-        val graphBitmap = drawTimelineGraph(liveUpdate)
-        remoteViews.setImageViewBitmap(R.id.notification_graph, graphBitmap)
+        val smallRemoteViews = RemoteViews(context.packageName, R.layout.notification_live_update)
+        smallRemoteViews.setViewVisibility(R.id.notification_title, View.GONE)
+        smallRemoteViews.setViewVisibility(R.id.notification_phase, View.GONE)
+        smallRemoteViews.setViewVisibility(R.id.notification_spacer, View.GONE)
+        smallRemoteViews.setViewVisibility(R.id.notification_graph, View.GONE)
+        smallRemoteViews.setImageViewBitmap(R.id.notification_progress_bar, drawProgressBar(liveUpdate, showLabels = false))
+
+        val bigRemoteViews = RemoteViews(context.packageName, R.layout.notification_live_update)
+        bigRemoteViews.setViewVisibility(R.id.notification_title, View.VISIBLE)
+        bigRemoteViews.setTextViewText(R.id.notification_title, substanceName)
+        bigRemoteViews.setTextViewText(R.id.notification_phase, phaseName)
+        bigRemoteViews.setViewVisibility(R.id.notification_phase, View.VISIBLE)
+        bigRemoteViews.setViewVisibility(R.id.notification_spacer, View.VISIBLE)
+        bigRemoteViews.setViewVisibility(R.id.notification_graph, View.VISIBLE)
+        bigRemoteViews.setImageViewBitmap(R.id.notification_progress_bar, drawProgressBar(liveUpdate, showLabels = true))
+        bigRemoteViews.setImageViewBitmap(R.id.notification_graph, drawTimelineGraph(liveUpdate))
 
         val notification = NotificationCompat.Builder(context, LIVE_UPDATE_CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher)
-            .setContentTitle(substanceName)
-            .setContentText("Phase: $phaseName")
-            .setCustomContentView(remoteViews)
-            .setCustomBigContentView(remoteViews)
+            .setContentTitle("jrnl")
+            .setContentText(substanceName)
+            .setCustomContentView(smallRemoteViews)
+            .setCustomBigContentView(bigRemoteViews)
             .setStyle(NotificationCompat.DecoratedCustomViewStyle())
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setCategory(NotificationCompat.CATEGORY_PROGRESS)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .build()
         notificationManager.notify(LIVE_UPDATE_NOTIFICATION_ID, notification)
+    }
+
+    private fun drawProgressBar(liveUpdate: LiveUpdateModel, showLabels: Boolean): Bitmap {
+        val width = 600
+        val height = if (showLabels) 80 else 40
+        val paddingHorizontal = 30f
+        val barY = if (showLabels) 30f else 20f
+        
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap)
+        
+        val duration = liveUpdate.duration
+        val startTime = liveUpdate.ingestionWithCompanion.ingestion.time
+        
+        val onsetSec = duration.onset?.maxInSec ?: 0f
+        val comeupSec = duration.comeup?.maxInSec ?: 0f
+        val peakSec = duration.peak?.maxInSec ?: 0f
+        val offsetSec = duration.offset?.maxInSec ?: 0f
+        val afterglowSec = duration.afterglow?.maxInSec ?: (3600f * 4)
+        
+        val totalSec = onsetSec + comeupSec + peakSec + offsetSec + afterglowSec
+        val pixelsPerSec = (width - 2 * paddingHorizontal) / totalSec
+        
+        val x0 = paddingHorizontal
+        val x1 = x0 + onsetSec * pixelsPerSec
+        val x2 = x1 + comeupSec * pixelsPerSec
+        val x3 = x2 + peakSec * pixelsPerSec
+        val x4 = x3 + offsetSec * pixelsPerSec
+        val x5 = x4 + afterglowSec * pixelsPerSec
+        
+        val paint = Paint().apply {
+            strokeWidth = if (showLabels) 12f else 10f
+            strokeCap = Paint.Cap.ROUND
+            isAntiAlias = true
+        }
+        
+        // Onset
+        paint.color = android.graphics.Color.LTGRAY
+        canvas.drawLine(x0, barY, x1, barY, paint)
+        
+        // Comeup
+        paint.color = android.graphics.Color.parseColor("#40C8E0") // Teal
+        paint.pathEffect = DashPathEffect(floatArrayOf(10f, 10f), 0f)
+        canvas.drawLine(x1, barY, x2, barY, paint)
+        
+        // Peak
+        paint.color = android.graphics.Color.parseColor("#0A84FF") // Blue
+        paint.pathEffect = null
+        canvas.drawLine(x2, barY, x3, barY, paint)
+        
+        // Offset
+        paint.pathEffect = DashPathEffect(floatArrayOf(10f, 10f), 0f)
+        canvas.drawLine(x3, barY, x4, barY, paint)
+        
+        // Afterglow
+        paint.color = android.graphics.Color.parseColor("#FF9F0A") // Orange
+        paint.pathEffect = null
+        canvas.drawLine(x4, barY, x5, barY, paint)
+        
+        // Marker
+        val now = Instant.now()
+        val elapsed = Duration.between(startTime, now).seconds
+        if (elapsed in 0..totalSec.toLong()) {
+            val nowX = x0 + elapsed * pixelsPerSec
+            val markerPaint = Paint().apply {
+                color = android.graphics.Color.parseColor("#FFD60A") // Yellow
+                style = Paint.Style.FILL
+                isAntiAlias = true
+            }
+            val markerSize = if (showLabels) 15f else 12f
+            canvas.drawCircle(nowX, barY, markerSize, markerPaint)
+            
+            val triSize = if (showLabels) 5f else 4f
+            val triPath = Path().apply {
+                moveTo(nowX - triSize, barY - triSize)
+                lineTo(nowX + (triSize * 1.4f), barY)
+                lineTo(nowX - triSize, barY + triSize)
+                close()
+            }
+            markerPaint.color = android.graphics.Color.BLACK
+            canvas.drawPath(triPath, markerPaint)
+        }
+        
+        if (showLabels) {
+            // Labels
+            val textPaint = Paint().apply {
+                color = android.graphics.Color.GRAY
+                textSize = 16f
+                textAlign = Paint.Align.CENTER
+                isAntiAlias = true
+            }
+            if (comeupSec > 0) canvas.drawText("comeup", (x1 + x2) / 2f, barY + 35f, textPaint)
+            if (peakSec > 0) canvas.drawText("peak", (x2 + x3) / 2f, barY + 35f, textPaint)
+            if (offsetSec > 0) canvas.drawText("comedown", (x3 + x4) / 2f, barY + 35f, textPaint)
+        }
+        
+        return bitmap
     }
 
     private fun drawTimelineGraph(liveUpdate: LiveUpdateModel): Bitmap {

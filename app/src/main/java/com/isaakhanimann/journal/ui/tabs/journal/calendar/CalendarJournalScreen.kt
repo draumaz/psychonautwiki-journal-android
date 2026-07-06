@@ -101,7 +101,7 @@ fun CalendarJournalScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Journal") },
+                title = { Text("jrnl") },
                 actions = {
                     val coroutineScope = rememberCoroutineScope()
                     TextButton(onClick = {

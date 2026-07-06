@@ -80,7 +80,7 @@ fun AcceptConditionsScreen(
                 if (allIsChecked) painterResource(R.drawable.eye_open) else painterResource(R.drawable.eye_closed)
             Image(
                 painter = painter,
-                contentDescription = "PsychonautWiki eye",
+                contentDescription = "jrnl eye",
                 modifier = Modifier
                     .clip(RoundedCornerShape(30.dp))
                     .clickable {
