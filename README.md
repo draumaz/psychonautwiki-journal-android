@@ -1,36 +1,3 @@
-# ⚠️ Project Fork: Vibe-Coded Edition
-
-This repository is a personalized, **vibe-coded fork** of the original jrnl. 
-
-### What is a "Vibe-Coded" fork?
-Unlike traditional development, this version is built and maintained through high-level intent and AI-assisted "vibes." It focuses on rapid UI modernization, expressive animations, and implementing features by articulating the desired feel rather than just the code.
-
-Key changes in this fork include:
-- **Material 3 Expressive makeover**: Bouncy animations, pill-shaped navigation, and immersive edge-to-edge layouts. 
-- **Morphing Bottom UI**: A chunky, 80dp high navigation pill that expressively transforms into a bottom-centered search bar. It features gesture-driven transitions where the active highlight lerps and morphs in real-time with the predictive back gesture.
-- **Ergonomic Search**: The search bar automatically docks above the keyboard when typing, ensuring effortless one-handed use.
-- **Wine-Coded Theming**: A sophisticated deep red and wine-colored interface (`#0F0808` background) with glass-morphic translucent surfaces.
-- **Expressive Live Updates**: Immersive, system-wide notifications for ongoing ingestions featuring a visual timeline graph. It tracks your phase (Onset, Peak, etc.) in real-time with a "NOW" indicator, similar to a transit or delivery live activity.
-- **Visual Refinements**: Enhanced legibility with increased color tinting (0.35 alpha) on category badges, a decluttered ingestion flow, and collapsible settings sections for a cleaner interface.
-- **AI-Driven Iteration**: Every feature and refactor is guided by natural language conversations with AI, prioritizing the user experience "vibe."
-
----
-
-# ⚠️ Original Project Archived
-
-This repository has been archived.
-Active development continues in a private repository.
-
-While there were a few external contributions, I’m grateful to everyone who contributed and have received their consent to relicense the project from GPL-3 to a proprietary license.
-To make development sustainable, the app now includes a premium tier while keeping core features - including substance information and basic logging - free.
-Because of this partial monetization, future versions are closed-source to prevent redistribution of paid functionality.
-
-You can still explore this repository to learn from its earlier open-source implementation, but it will not receive further updates or support.
-
-Copyright (C) 2022 Isaak Hanimann.
-
-See the end of the file for license conditions.
-
 # jrnl
 
 jrnl is an Android app to make recreational drug users safer. The aim is to provide features that are attractive to users as well as useful from a harm-reduction perspective.
