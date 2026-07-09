@@ -89,7 +89,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
@@ -112,6 +111,8 @@ import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.isaakhanimann.journal.ui.main.components.ExpressiveNavItem
+import com.isaakhanimann.journal.ui.main.components.ScallopedPillShape
 import com.isaakhanimann.journal.ui.main.navigation.JournalTopLevelRoute
 import com.isaakhanimann.journal.ui.main.navigation.graphs.AddIngestionRoute
 import com.isaakhanimann.journal.ui.main.navigation.graphs.AddIngestionSearchRoute
@@ -136,14 +137,20 @@ fun MainScreen(
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
 
+        var isScalloped by remember { mutableStateOf(false) }
         var predictiveBackProgress by remember { mutableFloatStateOf(0f) }
-        val visualBackProgress by animateFloatAsState(
-            targetValue = predictiveBackProgress,
-            animationSpec = if (predictiveBackProgress > 0f) snap() else spring(stiffness = Spring.StiffnessLow),
-            label = "visualBackProgress"
-        )
+        var targetRouteDuringBack by remember { mutableStateOf<Any?>(null) }
+        
+        val visualBackProgress = predictiveBackProgress
 
         PredictiveBackHandler(enabled = navController.previousBackStackEntry != null) { progressFlow ->
+            val previousBackStackEntry = navController.previousBackStackEntry
+            targetRouteDuringBack = previousBackStackEntry?.destination?.let { dest ->
+                topLevelRoutes.find { route -> 
+                    dest.hierarchy.any { it.hasRoute(route.route::class) } 
+                }?.route
+            }
+            
             try {
                 progressFlow.collect { backEvent ->
                     predictiveBackProgress = backEvent.progress
@@ -153,6 +160,7 @@ fun MainScreen(
                 // handle cancellation
             } finally {
                 predictiveBackProgress = 0f
+                targetRouteDuringBack = null
             }
         }
 
@@ -183,8 +191,6 @@ fun MainScreen(
         )
 
         // Navigation bar entry logic
-        val isBottomBarInLayout = barEntryProgress > 0.01f
-
         val nestedScrollConnection = remember {
             object : NestedScrollConnection {
                 override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -276,18 +282,12 @@ fun MainScreen(
                         }
                     }
             ) {
-                val isKeyboardVisible = WindowInsets.isImeVisible
-                val bottomPadding by animateDpAsState(
-                    targetValue = if (isKeyboardVisible) 8.dp else 12.dp,
-                    label = "bottomPadding"
-                )
-
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
                         .imePadding()
                         .navigationBarsPadding()
-                        .padding(bottom = bottomPadding),
+                        .padding(bottom = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -338,15 +338,20 @@ fun MainScreen(
                     Surface(
                         modifier = Modifier
                             .padding(horizontal = 16.dp)
-                            .height(80.dp)
+                            .animateContentSize(
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioNoBouncy,
+                                    stiffness = Spring.StiffnessMedium
+                                )
+                            )
                             .graphicsLayer {
                                 // Add a subtle squeeze effect during predictive back
                                 val scaleY = 1f - (visualBackProgress * 0.05f)
                                 this.scaleY = scaleY
                                 transformOrigin = TransformOrigin(0.5f, 1f)
                             },
-                        shape = CircleShape,
-                        color = Color(0xFF1F1212).copy(alpha = 0.85f),
+                        shape = ScallopedPillShape(isScalloped),
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.95f),
                         shadowElevation = 8.dp
                     ) {
                         AnimatedContent(
@@ -360,7 +365,7 @@ fun MainScreen(
                                     fadeIn(animationSpec = tween(250))
                                         .togetherWith(fadeOut(animationSpec = tween(250)))
                                         .using(
-                                            SizeTransform { _, _ ->
+                                            SizeTransform(clip = false) { _, _ ->
                                                 spring(
                                                     dampingRatio = Spring.DampingRatioLowBouncy,
                                                     stiffness = Spring.StiffnessLow
@@ -388,15 +393,16 @@ fun MainScreen(
 
                                     Row(
                                         modifier = Modifier
-                                            .fillMaxHeight()
-                                            .padding(horizontal = 20.dp),
+                                            .height(56.dp)
+                                            .padding(horizontal = 8.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         Icon(
                                             Icons.Default.Search,
                                             contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(start = 12.dp)
                                         )
                                         Box(
                                             modifier = Modifier
@@ -448,98 +454,64 @@ fun MainScreen(
                                 }
                             } else {
                                 Row(
-                                    modifier = Modifier
-                                        .fillMaxHeight()
-                                        .padding(horizontal = 8.dp),
+                                    modifier = Modifier.padding(8.dp),
                                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     topLevelRoutes.forEach { topLevelRoute ->
-                                        val selected = currentDestination?.hierarchy?.any {
+                                        val isSelected = currentDestination?.hierarchy?.any {
                                             it.hasRoute(topLevelRoute.route::class)
                                         } == true
 
-                                        val isTarget = visualBackProgress > 0f && navController.previousBackStackEntry?.destination?.hierarchy?.any { dest ->
-                                            dest.hasRoute(topLevelRoute.route::class)
-                                        } == true
-
-                                        val selectionAmount by animateFloatAsState(
-                                            targetValue = if (visualBackProgress > 0f) {
-                                                when {
-                                                    selected && isTarget -> 1f
-                                                    selected -> 1f - visualBackProgress
-                                                    isTarget -> visualBackProgress
-                                                    else -> 0f
-                                                }
-                                            } else {
-                                                if (selected) 1f else 0f
-                                            },
-                                            animationSpec = if (visualBackProgress > 0f) snap() else spring(stiffness = Spring.StiffnessLow),
-                                            label = "selectionAmount"
+                                        val isTarget = visualBackProgress > 0f && (
+                                            targetRouteDuringBack == topLevelRoute.route ||
+                                            navController.previousBackStackEntry?.destination?.hierarchy?.any { dest ->
+                                                dest.hasRoute(topLevelRoute.route::class)
+                                            } == true
                                         )
 
-                                        val backgroundColor =
-                                            lerp(Color.Transparent, Color(0xFF4A2A2A), selectionAmount)
-                                        val contentColor =
-                                            lerp(Color(0xFF9C8282), Color(0xFFF2DEDE), selectionAmount)
+                                        val animatedAlpha by animateFloatAsState(
+                                            targetValue = if (isSelected) 1f else 0f,
+                                            animationSpec = spring(stiffness = Spring.StiffnessLow),
+                                            label = "selectionAlpha"
+                                        )
 
-                                        Row(
-                                            modifier = Modifier
-                                                .padding(vertical = 10.dp)
-                                                .fillMaxHeight()
-                                                .clip(CircleShape)
-                                                .background(backgroundColor)
-                                                .clickable {
-                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    if (selected) {
-                                                        val isAlreadyOnTopOfTab = topLevelRoutes.any { it.route == currentDestination.route }
-                                                        if (!isAlreadyOnTopOfTab) {
-                                                            navController.popBackStack()
+                                        val selectionAmount = when {
+                                            // Handle the case where we are swiping within the same top-level route
+                                            visualBackProgress > 0f && isSelected && isTarget -> 1f
+                                            // Handle the case where we are swiping away from this selected route
+                                            visualBackProgress > 0f && isSelected -> 1f - visualBackProgress
+                                            // Handle the case where we are swiping towards this route
+                                            visualBackProgress > 0f && isTarget -> visualBackProgress
+                                            // Handle the case where we are swiping between two other routes
+                                            visualBackProgress > 0f -> 0f
+                                            // Normal state (no gesture)
+                                            else -> animatedAlpha
+                                        }
+
+                                        ExpressiveNavItem(
+                                            label = topLevelRoute.name,
+                                            icon = if (selectionAmount > 0.5f) topLevelRoute.filledIcon else topLevelRoute.outlinedIcon,
+                                            isSelected = isSelected,
+                                            selectionAlphaOverride = selectionAmount,
+                                            onLongHold = { isScalloped = !isScalloped },
+                                            onClick = {
+                                                if (isSelected) {
+                                                    val isAlreadyOnTopOfTab = topLevelRoutes.any { it.route == currentDestination.route }
+                                                    if (!isAlreadyOnTopOfTab) {
+                                                        navController.popBackStack()
+                                                    }
+                                                } else {
+                                                    navController.navigate(topLevelRoute.route) {
+                                                        popUpTo(navController.graph.findStartDestination().id) {
+                                                            saveState = true
                                                         }
-                                                    } else {
-                                                        navController.navigate(topLevelRoute.route) {
-                                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                                saveState = true
-                                                            }
-                                                            launchSingleTop = true
-                                                            restoreState = true
-                                                        }
+                                                        launchSingleTop = true
+                                                        restoreState = true
                                                     }
                                                 }
-                                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                                                .scale(1f + (0.05f * selectionAmount)),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp * selectionAmount)
-                                        ) {
-                                            Icon(
-                                                imageVector = if (selectionAmount > 0.5f) topLevelRoute.filledIcon else topLevelRoute.outlinedIcon,
-                                                contentDescription = topLevelRoute.name,
-                                                tint = contentColor
-                                            )
-                                            Box(
-                                                modifier = Modifier
-                                                    .layout { measurable, constraints ->
-                                                        val placeable = measurable.measure(constraints)
-                                                        val width =
-                                                            (placeable.width * selectionAmount).toInt()
-                                                        layout(width, placeable.height) {
-                                                            placeable.placeRelative(0, 0)
-                                                        }
-                                                    }
-                                                    .graphicsLayer {
-                                                        alpha = selectionAmount
-                                                        clip = true
-                                                    }
-                                            ) {
-                                                Text(
-                                                    text = topLevelRoute.name,
-                                                    color = contentColor,
-                                                    style = MaterialTheme.typography.labelLarge,
-                                                    maxLines = 1,
-                                                    softWrap = false
-                                                )
                                             }
-                                        }
+                                        )
                                     }
                                 }
                             }
