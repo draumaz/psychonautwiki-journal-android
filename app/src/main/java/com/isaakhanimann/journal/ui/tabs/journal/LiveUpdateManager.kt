@@ -66,6 +66,7 @@ data class LiveUpdateModel(
     val ingestionWithCompanion: IngestionWithCompanionAndCustomUnit,
     val timelineModel: AllTimelinesModel,
     val duration: RoaDuration,
+    val isInAfterglow: Boolean,
 )
 
 @Singleton
@@ -85,7 +86,8 @@ class LiveUpdateManager @Inject constructor(
     }
 
     val liveUpdateFlow = experienceRepo.getSortedIngestionsWithSubstanceCompanionsFlow(limit = 20)
-        .combine(tickerFlow) { ingestions, now ->
+        .combine(tickerFlow) { ingestions, _ ->
+            val now = Instant.now()
             val activeIngestions = ingestions.mapNotNull { ingestionWithCompanion ->
                 val substance =
                     searchRepository.substanceRepo.getSubstance(ingestionWithCompanion.ingestion.substanceName)
@@ -102,8 +104,10 @@ class LiveUpdateManager @Inject constructor(
 
                 val totalActiveSeconds = totalMaxSeconds + afterglowMaxSeconds
                 val elapsedSeconds = Duration.between(ingestionWithCompanion.ingestion.time, now).seconds
+                val isInAfterglow = elapsedSeconds > totalMaxSeconds
 
-                if (elapsedSeconds in 0..totalActiveSeconds.toLong()) {
+                // Allow for a small buffer of 10 seconds in case of minor clock drift when logging
+                if (elapsedSeconds >= -10 && elapsedSeconds <= totalActiveSeconds.toLong()) {
                     val timelineModel = AllTimelinesModel(
                         dataForLines = listOf(
                             DataForOneEffectLine(
@@ -126,7 +130,8 @@ class LiveUpdateManager @Inject constructor(
                     LiveUpdateModel(
                         ingestionWithCompanion = ingestionWithCompanion,
                         timelineModel = timelineModel,
-                        duration = duration
+                        duration = duration,
+                        isInAfterglow = isInAfterglow
                     )
                 } else {
                     null

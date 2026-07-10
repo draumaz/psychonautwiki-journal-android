@@ -18,7 +18,6 @@
 
 package com.isaakhanimann.journal.ui.tabs.stats
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -64,6 +63,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -219,70 +219,80 @@ fun StatsScreen(
                             contentPadding = PaddingValues(bottom = 120.dp)
                         ) {
                             items(statsModel.statItems) { subStat ->
-                                Column {
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = horizontalPadding, vertical = 4.dp),
+                                    shape = RoundedCornerShape(24.dp),
+                                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                                    onClick = {
+                                        navigateToSubstanceCompanion(
+                                            subStat.substanceName,
+                                            statsModel.consumerName
+                                        )
+                                    }
+                                ) {
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                                         modifier = Modifier
-                                            .fillMaxWidth()
-                                            .height(intrinsicSize = IntrinsicSize.Min)
-                                            .clickable {
-                                                navigateToSubstanceCompanion(
-                                                    subStat.substanceName,
-                                                    statsModel.consumerName
-                                                )
-                                            }
-                                            .padding(
-                                                horizontal = horizontalPadding,
-                                                vertical = 5.dp
-                                            )
+                                            .padding(16.dp)
+                                            .height(IntrinsicSize.Min)
                                     ) {
                                         Surface(
-                                            shape = RoundedCornerShape(3.dp),
-                                            color = subStat.color.getComposeColor(
-                                                isDarkTheme
-                                            ),
+                                            shape = RoundedCornerShape(12.dp),
+                                            color = subStat.color.getComposeColor(isDarkTheme),
                                             modifier = Modifier
-                                                .width(11.dp)
+                                                .width(8.dp)
                                                 .fillMaxHeight()
                                         ) {}
-                                        Column {
+                                        Column(modifier = Modifier.weight(1f)) {
                                             Text(
                                                 text = subStat.substanceName,
-                                                style = MaterialTheme.typography.titleMedium
+                                                style = MaterialTheme.typography.titleLarge,
+                                                fontWeight = FontWeight.Bold
                                             )
                                             val addOn =
                                                 if (subStat.experienceCount == 1) " experience" else " experiences"
                                             Text(
                                                 text = subStat.experienceCount.toString() + addOn,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
-                                        Spacer(modifier = Modifier.weight(1f))
                                         Column(horizontalAlignment = Alignment.End) {
                                             val cumulativeDose = subStat.totalDose
                                             if (cumulativeDose != null) {
-                                                if (cumulativeDose.isEstimate) {
+                                                val doseText = if (cumulativeDose.isEstimate) {
                                                     if (cumulativeDose.estimatedDoseStandardDeviation != null) {
-                                                        Text(text = "total ${cumulativeDose.dose.toReadableString()}±${cumulativeDose.estimatedDoseStandardDeviation.toReadableString()} ${cumulativeDose.units}")
+                                                        "total ${cumulativeDose.dose.toReadableString()}±${cumulativeDose.estimatedDoseStandardDeviation.toReadableString()} ${cumulativeDose.units}"
                                                     } else {
-                                                        Text(text = "total ~${cumulativeDose.dose.toReadableString()} ${cumulativeDose.units}")
+                                                        "total ~${cumulativeDose.dose.toReadableString()} ${cumulativeDose.units}"
                                                     }
                                                 } else {
-                                                    Text(text = "total ${cumulativeDose.dose.toReadableString()} ${cumulativeDose.units}")
-
+                                                    "total ${cumulativeDose.dose.toReadableString()} ${cumulativeDose.units}"
                                                 }
+                                                Text(
+                                                    text = doseText,
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    fontWeight = FontWeight.SemiBold
+                                                )
                                             } else {
-                                                Text(text = "total dose unknown")
+                                                Text(
+                                                    text = "total dose unknown",
+                                                    style = MaterialTheme.typography.bodyMedium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
                                             }
-                                            subStat.routeCounts.forEach {
+                                            subStat.routeCounts.take(2).forEach {
                                                 Text(
                                                     text = "${it.administrationRoute.displayText.lowercase()} ${it.count}x ",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                                 )
                                             }
                                         }
-
                                     }
-                                    HorizontalDivider()
                                 }
                             }
                         }

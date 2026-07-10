@@ -34,7 +34,6 @@ import androidx.compose.material.icons.filled.Keyboard
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -172,13 +171,11 @@ fun SearchScreen(
                         ), onTap = {
                             onCustomSubstanceTap(customSubstance.id)
                         })
-                        HorizontalDivider()
                     }
                     items(filteredSubstances) { substance ->
                         SubstanceRow(substanceModel = substance, onTap = {
                             onSubstanceTap(substance)
                         })
-                        HorizontalDivider()
                     }
 
                     item {

@@ -36,6 +36,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
@@ -43,7 +44,6 @@ import androidx.compose.material.icons.filled.GppBad
 import androidx.compose.material.icons.filled.Update
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -61,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
 import androidx.compose.ui.unit.dp
@@ -176,50 +177,68 @@ fun SubstanceScreen(
                 .padding(padding)
         ) {
             if (!substance.isApproved) {
-                ElevatedCard(
+                Surface(
                     modifier = Modifier
                         .padding(
                             horizontal = horizontalPadding,
                             vertical = verticalPaddingCards
                         )
-                        .fillMaxWidth()
+                        .fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    tonalElevation = 2.dp
                 ) {
                     Row(
                         modifier = Modifier.padding(
-                            vertical = 5.dp,
+                            vertical = 12.dp,
                             horizontal = horizontalPadding
-                        )
+                        ),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(imageVector = Icons.Default.GppBad, contentDescription = "Verified")
+                        Icon(
+                            imageVector = Icons.Default.GppBad,
+                            contentDescription = "Not Verified",
+                            tint = MaterialTheme.colorScheme.onErrorContainer
+                        )
                         Spacer(Modifier.size(ButtonDefaults.IconSpacing))
-                        Text(text = "Info is not approved")
+                        Text(
+                            text = "Info is not approved",
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
                 }
             }
             val categories = substanceWithCategories.categories
             if (substance.summary != null || categories.isNotEmpty()) {
                 VerticalSpace()
-                ElevatedCard(
+                Surface(
                     modifier = Modifier.padding(
                         horizontal = horizontalPadding,
                         vertical = verticalPaddingCards
-                    )
+                    ).fillMaxWidth(),
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    tonalElevation = 2.dp
                 ) {
                     Column(
                         modifier = Modifier
                             .padding(
                                 horizontal = horizontalPadding,
-                                vertical = 10.dp
+                                vertical = 16.dp
                             )
                             .fillMaxWidth()
                     ) {
                         if (substance.summary != null) {
-                            Text(text = substance.summary)
+                            Text(
+                                text = substance.summary,
+                                style = MaterialTheme.typography.bodyLarge
+                            )
                             VerticalSpace()
                         }
                         FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                            verticalArrangement = Arrangement.spacedBy(5.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
                             categories.forEach { category ->
                                 CategoryChipFromSubstanceScreen(category, navigateToCategoryScreen)

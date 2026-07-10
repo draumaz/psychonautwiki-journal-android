@@ -18,31 +18,45 @@
 
 package com.isaakhanimann.journal.ui.tabs.search.substance
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ElevatedCard
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.isaakhanimann.journal.ui.theme.horizontalPadding
 import com.isaakhanimann.journal.ui.theme.verticalPaddingCards
 
 @Composable
 fun SectionWithTitle(title: String, content: @Composable () -> Unit) {
-    ElevatedCard(
-        modifier = Modifier.padding(
-            horizontal = horizontalPadding,
-            vertical = verticalPaddingCards
-        ).fillMaxWidth()
+    Surface(
+        modifier = Modifier
+            .padding(
+                horizontal = horizontalPadding,
+                vertical = verticalPaddingCards
+            )
+            .fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 2.dp
     ) {
-        Text(
-            color = MaterialTheme.colorScheme.onSurface,
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            modifier =  Modifier.padding(horizontal = horizontalPadding, vertical = 8.dp)
-        )
-        content()
+        Column {
+            Text(
+                color = MaterialTheme.colorScheme.onSurface,
+                text = title,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(horizontal = horizontalPadding, vertical = 16.dp)
+            )
+            content()
+            Spacer(modifier = Modifier.height(8.dp))
+        }
     }
 }

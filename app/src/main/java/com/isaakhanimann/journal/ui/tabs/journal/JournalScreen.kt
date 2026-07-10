@@ -25,7 +25,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,8 +75,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -89,6 +90,7 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.tooling.preview.PreviewParameter
@@ -96,9 +98,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.isaakhanimann.journal.data.room.experiences.entities.AdaptiveColor
 import com.isaakhanimann.journal.data.room.experiences.relations.ExperienceWithIngestionsCompanionsAndRatings
 import com.isaakhanimann.journal.ui.tabs.journal.components.ExperienceRow
+import com.isaakhanimann.journal.ui.tabs.journal.experience.components.TimeDisplayOption
+import com.isaakhanimann.journal.ui.tabs.journal.experience.timeline.AllTimelines
 import com.isaakhanimann.journal.ui.tabs.stats.EmptyScreenDisclaimer
 import com.isaakhanimann.journal.ui.theme.JournalTheme
 import com.isaakhanimann.journal.ui.theme.horizontalPadding
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.Duration
 import java.time.Instant
@@ -165,139 +170,20 @@ fun ExperiencesScreenPreview(
 }
 
 @Composable
-fun TimelineGraph(
-    liveUpdate: LiveUpdateModel,
-    color: Color,
-) {
-    val now = Instant.now()
-    val startTime = liveUpdate.ingestionWithCompanion.ingestion.time
-    val duration = liveUpdate.duration
-    val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
-    val zoneId = remember { ZoneId.systemDefault() }
-
-    Canvas(modifier = Modifier.fillMaxSize()) {
-        val width = size.width
-        val height = size.height
-        val paddingHorizontal = 40.dp.toPx()
-        val paddingVertical = 30.dp.toPx()
-
-        val onsetSec = duration.onset?.maxInSec ?: 0f
-        val comeupSec = duration.comeup?.maxInSec ?: 0f
-        val peakSec = duration.peak?.maxInSec ?: 0f
-        val offsetSec = duration.offset?.maxInSec ?: 0f
-        val afterglowSec = duration.afterglow?.maxInSec ?: (3600f * 4)
-
-        val totalSec = onsetSec + comeupSec + peakSec + offsetSec + afterglowSec
-        val pixelsPerSec = (width - 2 * paddingHorizontal) / totalSec
-
-        val baseLineY = height - paddingVertical
-        val topY = paddingVertical
-
-        val x0 = paddingHorizontal
-        val x1 = x0 + onsetSec * pixelsPerSec
-        val x2 = x1 + comeupSec * pixelsPerSec
-        val x3 = x2 + peakSec * pixelsPerSec
-        val x4 = x3 + offsetSec * pixelsPerSec
-        val x5 = x4 + afterglowSec * pixelsPerSec
-
-        val path = Path().apply {
-            moveTo(x0, baseLineY)
-            lineTo(x1, baseLineY)
-            lineTo(x2, topY)
-            lineTo(x3, topY)
-            lineTo(x4, baseLineY)
-        }
-
-        drawPath(
-            path = path,
-            color = color,
-            style = Stroke(
-                width = 4.dp.toPx(),
-                pathEffect = androidx.compose.ui.graphics.PathEffect.cornerPathEffect(12.dp.toPx())
-            )
-        )
-
-        val fillPath = Path().apply {
-            addPath(path)
-            lineTo(x4, baseLineY)
-            lineTo(x0, baseLineY)
-            close()
-        }
-
-        drawPath(
-            path = fillPath,
-            color = color.copy(alpha = 0.15f)
-        )
-
-        // Afterglow
-        drawLine(
-            color = color,
-            start = androidx.compose.ui.geometry.Offset(x4, baseLineY),
-            end = androidx.compose.ui.geometry.Offset(x5, baseLineY),
-            strokeWidth = 2.dp.toPx(),
-            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
-                floatArrayOf(10f, 10f), 0f
-            )
-        )
-
-        // Current time marker
-        val elapsed = Duration.between(startTime, now).seconds
-        if (elapsed in 0..totalSec.toLong()) {
-            val nowX = x0 + elapsed * pixelsPerSec
-            drawLine(
-                color = Color.Red,
-                start = androidx.compose.ui.geometry.Offset(nowX, 0f),
-                end = androidx.compose.ui.geometry.Offset(nowX, height),
-                strokeWidth = 2.dp.toPx()
-            )
-
-            drawIntoCanvas { canvas ->
-                val paint = android.graphics.Paint().apply {
-                    this.color = android.graphics.Color.RED
-                    textSize = 12.dp.toPx()
-                    textAlign = android.graphics.Paint.Align.CENTER
-                    typeface = android.graphics.Typeface.DEFAULT_BOLD
-                }
-                canvas.nativeCanvas.drawText("NOW", nowX, 15.dp.toPx(), paint)
-            }
-        }
-
-        // Labels
-        drawIntoCanvas { canvas ->
-            val paint = android.graphics.Paint().apply {
-                this.color = android.graphics.Color.GRAY
-                textSize = 10.dp.toPx()
-                textAlign = android.graphics.Paint.Align.CENTER
-            }
-            canvas.nativeCanvas.drawText(
-                startTime.atZone(zoneId).format(timeFormatter),
-                x0,
-                height,
-                paint
-            )
-            canvas.nativeCanvas.drawText(
-                startTime.plusSeconds(totalSec.toLong()).atZone(zoneId).format(timeFormatter),
-                x5,
-                height,
-                paint
-            )
-        }
-    }
-}
-
-@Composable
 fun LiveUpdateCardWrapper(
     liveUpdate: LiveUpdateModel?,
+    isTimeRelativeToNow: Boolean,
     navigateToExperiencePopNothing: (experienceId: Int) -> Unit
 ) {
     AnimatedVisibility(
-        visible = liveUpdate != null,
+        visible = liveUpdate != null && !liveUpdate.isInAfterglow,
         enter = fadeIn() + expandVertically(),
         exit = fadeOut() + shrinkVertically()
     ) {
         if (liveUpdate != null) {
             LiveUpdateCard(
                 liveUpdate = liveUpdate,
+                isTimeRelativeToNow = isTimeRelativeToNow,
                 onTap = {
                     navigateToExperiencePopNothing(liveUpdate.ingestionWithCompanion.ingestion.experienceId)
                 }
@@ -309,6 +195,7 @@ fun LiveUpdateCardWrapper(
 @Composable
 fun LiveUpdateCard(
     liveUpdate: LiveUpdateModel,
+    isTimeRelativeToNow: Boolean,
     onTap: () -> Unit,
 ) {
     val timeFormatter = remember { DateTimeFormatter.ofPattern("HH:mm") }
@@ -339,11 +226,18 @@ fun LiveUpdateCard(
                         fontWeight = FontWeight.Bold
                     )
                     val startTime = liveUpdate.ingestionWithCompanion.ingestion.time
-                    Text(
-                        text = "Started at ${startTime.atZone(zoneId).format(timeFormatter)}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    if (isTimeRelativeToNow) {
+                        com.isaakhanimann.journal.ui.tabs.journal.experience.components.TimeRelativeToNowText(
+                            time = startTime,
+                            style = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        )
+                    } else {
+                        Text(
+                            text = "Started at ${startTime.atZone(zoneId).format(timeFormatter)}",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 Surface(
@@ -364,18 +258,22 @@ fun LiveUpdateCard(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            val adaptiveColor =
-                liveUpdate.ingestionWithCompanion.substanceCompanion?.color ?: AdaptiveColor.TEAL
-            val graphColor = adaptiveColor.getComposeColor(isSystemInDarkTheme())
+            val displayOption = if (isTimeRelativeToNow) {
+                TimeDisplayOption.RELATIVE_TO_NOW
+            } else {
+                TimeDisplayOption.REGULAR
+            }
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(120.dp)
+                    .height(140.dp) // Slightly taller to accommodate AllTimelines axis
             ) {
-                TimelineGraph(
-                    liveUpdate = liveUpdate,
-                    color = graphColor
+                AllTimelines(
+                    model = liveUpdate.timelineModel,
+                    isShowingCurrentTime = true,
+                    timeDisplayOption = displayOption,
+                    modifier = Modifier.fillMaxSize()
                 )
             }
         }
@@ -549,17 +447,40 @@ fun JournalScreen(
                         state = listState,
                         contentPadding = PaddingValues(bottom = 120.dp)
                     ) {
-                        item {
-                            LiveUpdateCardWrapper(
-                                liveUpdate = liveUpdate,
-                                navigateToExperiencePopNothing = navigateToExperiencePopNothing
-                            )
-                        }
                         if (experiences.isNotEmpty()) {
                             item {
                                 HorizontalDivider()
                             }
                         }
+                        item {
+                            Column {
+                                AnimatedVisibility(
+                                    visible = liveUpdate == null || liveUpdate.isInAfterglow,
+                                    enter = expandVertically(),
+                                    exit = shrinkVertically()
+                                ) {
+                                    Column {
+                                        Spacer(modifier = Modifier.height(32.dp))
+                                        Text(
+                                            text = "Past experiences",
+                                            style = MaterialTheme.typography.headlineLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(horizontal = horizontalPadding)
+                                        )
+                                        Spacer(modifier = Modifier.height(32.dp))
+                                    }
+                                }
+                                LiveUpdateCardWrapper(
+                                    liveUpdate = liveUpdate,
+                                    isTimeRelativeToNow = isTimeRelativeToNow,
+                                    navigateToExperiencePopNothing = navigateToExperiencePopNothing
+                                )
+                            }
+                        }
+
                         items(experiences) { experienceWithIngestions ->
                             ExperienceRow(
                                 experienceWithIngestions,
@@ -568,7 +489,6 @@ fun JournalScreen(
                                 },
                                 isTimeRelativeToNow = isTimeRelativeToNow
                             )
-                            HorizontalDivider()
                         }
                     }
                     this@Column.AnimatedVisibility(visible = isScrollUpButtonShown) {
